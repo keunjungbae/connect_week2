@@ -1,55 +1,53 @@
+var datastore = require('nedb');
+var db = new datastore({ filename: 'database.json', autoload: true });
+
 var express = require('express')
+var bodyParser = require('body-parser');
+
 var app = express()
+
+
+var urlencodedBodyParser = bodyParser.urlencoded({extended: true});
+app.use(urlencodedBodyParser);
 
 app.use(express.static('public'));
 
-var submittedData = [];
+app.set('view engine', 'ejs');
 
-app.get('/formpost', function (req, res) {
-  console.log("You submitted: " + req.query.textfield);
+
+
+
+
+app.post('/formpost', function (req, res) {
+	var submission = req.body.textfield;
+	console.log("They submitted: " + submission);
+	res.render('template.ejs',{response:submission})
+	// save submission into the database in the argument "saved"
+	db.submissions.save({"submission":submission}, function(err, saved) {
+		if( err || !saved ) console.log("Not saved");
+		else console.log("Saved");
+	  })
+  })
   
-  var dataToSave = `
-  <html>
-    <head>
-    <link rel="stylesheet" type="text/css" href="style.css">
-    </head>
-    <body><h3>BUMP!</h3>
-    <p>you submitted
-  `
-  + req.query.textfield +
-  ` </p>
-    <p><a href='/display'>All you've got</a></p>
-    </body>
-  </html>
-  `;
+  app.get('/display', function(req, res) {
+	// pull all submissions from database to render on display file
+	db.submissions.find({}, function(err, saved) {
+		if (err || !saved) {
+			  console.log("No results");
+		  }
+		else {
+					 console.log(saved);
+					 res.render('display.ejs',{submissions_on_page:saved});
+		   }
+	  })
+  })
 
-  res.send(dataToSave);
-  submittedData.push(req.query.textfield);
-})
 
-app.get('/display', function(req, res) {
   
-    var output = `
-  
-    <html>
-    <head>
-    <link rel="stylesheet" type="text/css" href="style.css">
-    </head>
-    <body>
-    <h3>These are all of your classes submitted!</h3>
-  `;
 
 
-  for (var i = 0; i < submittedData.length; i++) {
-       var fontSize = 24;
-       output += "<div style="
-       + "font-size:" + fontSize + ">" + submittedData[i] + "</div>";
-      }
 
 
-  res.send(output);
-})
-
-app.listen(80, function () {
-  console.log('App listening on port 80!')
+app.listen(8080, function () {
+  console.log('App listening on port 8080!')
 })
